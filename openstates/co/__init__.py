@@ -9,7 +9,7 @@ metadata = dict(
     name='Colorado',
     abbreviation='co',
     legislature_name='Colorado General Assembly',
-    legislature_url='http://www.leg.state.co.us/',
+    legislature_url='http://leg.colorado.gov/',
     capitol_timezone='America/Denver',
     chambers = {
         'upper': {'name': 'Senate', 'title': 'Senator'},
@@ -25,6 +25,9 @@ metadata = dict(
         {'name': '2015-2016',
          'sessions': ['2015A', '2016A'],
          'start_year': 2015, 'end_year': 2016},
+        {'name': '2017-2018',
+         'sessions': ['2017A'],
+         'start_year': 2017, 'end_year': 2018},
         ],
     session_details={
         '2011A': {
@@ -63,6 +66,11 @@ metadata = dict(
              'display_name': '2016 Regular Session',
             '_scraped_name': "2016 Regular Session",
          },
+        '2017A': {
+            'type'         : 'primary',
+             'display_name': '2017 Regular Session',
+            '_scraped_name': "2017 Regular Session",
+         },
     },
     feature_flags=['influenceexplorer'],
     _ignored_scraped_sessions = [
@@ -92,6 +100,8 @@ metadata = dict(
 def session_list():
     from billy.scrape.utils import url_xpath
     import re
+    # There is no current session index
+    #return []
     tags = url_xpath('http://www.leg.state.co.us/clics/clics2014a/cslFrontPages.nsf/PrevSessionInfo?OpenForm',
         "//font/text()")
     sessions = []

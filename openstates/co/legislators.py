@@ -5,7 +5,7 @@ from billy.scrape.committees  import Committee
 import lxml.html
 import re, contextlib
 
-CO_BASE_URL = "http://www.leg.state.co.us/"
+CO_BASE_URL = "http://leg.colorado.gov/"
 
 CTTY_BLACKLIST = [ # Invalid HTML causes us to snag these tags. Super annoying.
     "Top",
@@ -39,36 +39,26 @@ class COLegislatorScraper(LegislatorScraper):
 
     def _get_district_list(self, chamber, session):
         chamber = {
-            "upper" : "%5Ce.%20Senate%20Districts%20&%20Members",
-            "lower" : "h.%20House%20Districts%20&%20Members"
+            "upper" : "2",
+            "lower" : "1"
         }[chamber]
 
-        url = "http://www.leg.state.co.us/clics/clics" + session + \
-            "/directory.nsf/Pink%20Book/" + chamber + "?OpenView&Start=1"
+        url = "http://leg.colorado.gov/legislators?field_chamber_target_id=" + chamber + \
+            "&field_political_affiliation_target_id=All&sort_bef_combine=field_last_name_value%20ASC"
 
         return url
 
     def scrape_directory(self, next_page, chamber, session):
+        '''Download a list of legislators and parse out the people there.'''
         ret = {}
         html = self.get(next_page).text
         page = lxml.html.fromstring(html)
-        # Alright. We'll get all the districts.
-        dID = page.xpath( "//div[@id='viewBody']" )[0] # should be only one
-        distr = dID.xpath( "./table/tr/td/b/font/a" ) # What a mess...
-        for d in distr:
-            url = CO_BASE_URL + d.attrib['href']
-            if "Save Conflict" in d.text:
-                continue
+        rows = page.xpath( "//table[@id='legislators-overview-table']/tbody/tr" )
+        for row in rows:
+            ele = row.xpath( "./td/a" )[0]
+            url = CO_BASE_URL + ele.attrib['href']
+            ret[row.text] = url
 
-            ret[d.text] = url
-
-        nextPage = page.xpath( "//table/tr" )
-        navBar = nextPage[0]
-        np = CO_BASE_URL + navBar[len(navBar) - 1][0].attrib['href']
-        if not next_page == np:
-            subnodes = self.scrape_directory( np, chamber, session )
-            for node in subnodes:
-                ret[node] = subnodes[node]
         return ret
 
     def normalize_party( self, party_id ):
@@ -78,6 +68,7 @@ class COLegislatorScraper(LegislatorScraper):
             return "Other"
 
     def parse_homepage( self, hp_url ):
+        ''' Parse out profile details from legislator detail pages.'''
         image_base = "http://www.state.co.us/gov_dir/leg_dir/senate/members/"
         ret = []
         obj = {}

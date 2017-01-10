@@ -3,7 +3,7 @@ import lxml.html
 
 from billy.scrape.committees import CommitteeScraper, Committee
 
-COMMITTEE_URL = ("https://www.colorado.gov/pacific/cga-legislativecouncil/committees-3")
+COMMITTEE_URL = ("http://leg.colorado.gov/content/committees")
 
 
 class COCommitteeScraper(CommitteeScraper):

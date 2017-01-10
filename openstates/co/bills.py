@@ -10,7 +10,7 @@ from billy.scrape.votes import Vote
 from .actions import Categorizer
 
 
-CO_URL_BASE = "http://www.leg.state.co.us"
+CO_URL_BASE = "http://leg.colorado.gov"
 #                     ^^^ Yes, this is actually required
 
 

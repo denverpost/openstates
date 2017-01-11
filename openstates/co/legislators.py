@@ -61,14 +61,8 @@ class COLegislatorScraper(LegislatorScraper):
 
         return ret
 
-    def normalize_party( self, party_id ):
-        try:
-            return { "R" : "Republican", "D" : "Democratic" }[party_id]
-        except KeyError as e:
-            return "Other"
-
     def parse_homepage( self, hp_url ):
-        ''' Parse out profile details from legislator detail pages.'''
+        ''' Parse out profile details (image, committees) from legislator detail pages.'''
         image_base = "http://www.state.co.us/gov_dir/leg_dir/senate/members/"
         ret = []
         obj = {}
@@ -116,47 +110,32 @@ class COLegislatorScraper(LegislatorScraper):
         return obj
 
     def process_person( self, p_url ):
+        '''Scrapes a legislator detail page, such as http://leg.colorado.gov/legislators/irene-aguilar '''
         ret = { "homepage" : p_url }
 
         html = self.get(p_url).text
         page = lxml.html.fromstring(html)
         page.make_links_absolute(p_url)
 
-        info = page.xpath( '//table/tr' )[1]
-        tds = {
-            "name"  : 0,
-            "dist"  : 1,
-            "party" : 3,
-            "occup" : 4,
-            "cont"  : 6
-        }
+        info = page.xpath( '//div[@class="main-content-section"]' )[0]
+        main = info.xpath( './main' )[0]
+        sidebar = info.xpath( './aside' )[0]
+        leg_info = main.xpath( './article/div/div[@class="legislator-content"]/div' ) # Returns 2-3 elements.
 
-        party_id = info[tds['party']].text_content()
+        ret['party'] = leg_info[1].xpath( './div[@class="field-items"]/div' )[0].text_content()
 
-        person_name = clean_input(info[tds['name']].text_content())
-        person_name = clean_input(re.sub( '\(.*$', '', person_name).strip())
-        occupation  = clean_input(info[tds['occup']].text_content())
+        person_name = clean_input(main.xpath( './article/header/h1' )[0].text_content())
+        ret['name'] = clean_input(re.sub( '\(.*$', '', person_name).strip())
+        ret['occupation']  = clean_input(leg_info[0].xpath( './div[@class="field-items"]/div' )[0].text_content())
 
         urls = page.xpath( '//a' )
-        ret['photo_url'] = ""
-        home_page = page.xpath("//a[contains(text(), 'Home Page')]")
+        ret['photo_url'] = main.xpath( './article/div[@class="legislator-body"]/div[@class="legislator-profile-picture"]/div/div/div/img' )[0].attrib['src']
+        #ret['homepage'] = home_page.attrib['href'].strip()
 
-        if home_page != []:
-            home_page = home_page[0]
-            ret['homepage'] = home_page.attrib['href'].strip()
-            homepage = self.parse_homepage(
-                home_page.attrib['href'].strip() )
-
-            ret['ctty'] = homepage['ctty']
-            ret['photo_url'] = homepage['photo']
-            if "email" in homepage:
-                ret['email'] = homepage['email']
-            if "number" in homepage:
-                ret['number'] = homepage['number']
-
-        ret['party'] = self.normalize_party(party_id)
-        ret['name']  = person_name
-        ret['occupation'] = occupation
+        ret['ctty'] = main.xpath( './div/div/div/div/div[@class="committee-assignment"]' )
+        email = sidebar.xpath( './div/div[@id="block-cga-legislators-legislator-contact"]/div/div/div/div[@class="contact-email"]/a' )[0].attrib['href']
+        ret['email'] = email.replace('mailto:', '')
+        ret['number'] = sidebar.xpath( './div/div[@id="block-cga-legislators-legislator-contact"]/div/div/div/div[@class="contact-phone"]/div/div[@class="field-items"]/div' )[0].text_content()
         return ret
 
     def scrape(self, chamber, term):
